@@ -29,7 +29,7 @@ namespace kotte
     }
 
     void Application::run(){
-        while(!window_.should_close() && !exit_requested_){
+        while(!window_.should_close() && !exit_requested_ && player_alive_){ //added player_alive_ - should later make a restart menu
             run_frame(GetFrameTime());
         }
     }
@@ -361,7 +361,7 @@ namespace kotte
                 blocked_by_crate = true;
                 break;
             case EntityKind::player:
-                // Player-hit consequences are outside the Week 6 lifetime seam.
+                player_alive_ = false;
                 break;
             }
         }
@@ -693,6 +693,13 @@ namespace kotte
             ++collision_diagnostics_.exact_tests;
             if(CheckCollisionRecs(proposed_collision_bounds, entity_collision_bounds(*candidate))){
                 ++collision_diagnostics_.contacts;
+
+                //MY CODE - FINAL ASSIGNMENT - PLAYER DEATH
+                if (moving_entity_handle == player_handle_ && candidate->kind == EntityKind::enemy ||
+                    entity(moving_entity_handle).kind == EntityKind::enemy && candidate->kind == EntityKind::player){
+                    player_alive_ = false;
+                }
+
                 blocked = true;
             }
         }
