@@ -29,7 +29,7 @@ namespace kotte
     }
 
     void Application::run(){
-        while(!window_.should_close() && !exit_requested_ && player_alive_){ //added player_alive_ - should later make a restart menu
+        while(!window_.should_close() && !exit_requested_){
             run_frame(GetFrameTime());
         }
     }
@@ -47,14 +47,34 @@ namespace kotte
         //
         // Keeping one call site per phase makes event lifetime and mutation
         // boundaries visible as the simulation grows.
-        begin_frame();
-        collect_frame_actions();
-        update_gameplay(delta_time);
-        update_timed_gameplay(delta_time);
-        resolve_gameplay_facts();
-        apply_structural_mutations();
-        update_presentation(delta_time);
-        render();
+        if (current_game_state_ == Application::GameState::Playing) {
+            begin_frame();
+            collect_frame_actions();
+            update_gameplay(delta_time);
+            update_timed_gameplay(delta_time);
+            resolve_gameplay_facts();
+            apply_structural_mutations();
+            update_presentation(delta_time);
+            render();
+        }
+        //MY CODE - FINAL ASSIGNMENT different functions for main menu - for now also has the lost state
+        else if (current_game_state_ == Application::GameState::MainMenu || current_game_state_ == Application::GameState::Lost) {
+            main_menu_update();
+            main_menu_render();
+        }
+    }
+
+    void Application::main_menu_update() {
+        if (IsKeyPressed(KEY_SPACE)) {
+            current_game_state_ = Application::GameState::Playing;
+        }
+    }
+
+    void Application::main_menu_render() {
+        BeginDrawing();
+        ClearBackground(BLACK);
+        DrawText("Press SPACE to Start", 350, 300, 50, WHITE);
+        EndDrawing();
     }
 
     void Application::begin_frame() noexcept{
@@ -361,7 +381,8 @@ namespace kotte
                 blocked_by_crate = true;
                 break;
             case EntityKind::player:
-                player_alive_ = false;
+                //MY CODE - FINAL ASSIGNMENT played death from bomb explosion
+                current_game_state_ = Application::GameState::Lost;
                 break;
             }
         }
@@ -697,7 +718,7 @@ namespace kotte
                 //MY CODE - FINAL ASSIGNMENT - PLAYER DEATH
                 if (moving_entity_handle == player_handle_ && candidate->kind == EntityKind::enemy ||
                     entity(moving_entity_handle).kind == EntityKind::enemy && candidate->kind == EntityKind::player){
-                    player_alive_ = false;
+                    current_game_state_ = Application::GameState::Lost;
                 }
 
                 blocked = true;

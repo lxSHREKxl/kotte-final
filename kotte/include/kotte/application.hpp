@@ -47,6 +47,14 @@ namespace kotte
         void request_exit() noexcept;
 
     private:
+        //MY CODE - FINAL ASSIGNMENT state machine for current state of the game
+        enum class GameState {
+            MainMenu,
+            Playing,
+            Won,
+            Lost
+        };
+
         struct FrameActions final {
             Vector2 player_movement_direction{};
             bool place_bomb = false;
@@ -119,6 +127,11 @@ namespace kotte
         [[nodiscard]] static Vector2 tile_centre(int column, int row) noexcept;
         [[nodiscard]] static Color entity_color(EntityKind kind) noexcept;
         [[nodiscard]] static float entity_roundness(EntityKind kind) noexcept;
+
+        //MY CODE - FINAL ASSIGNMENT my own functions
+        void main_menu_update();
+        void main_menu_render();
+
         static constexpr int tile_size_ = 40;
         static constexpr int spatial_cell_tiles_ = 8;
         static constexpr float spatial_cell_size_ = tile_size_ * spatial_cell_tiles_;
@@ -159,7 +172,8 @@ namespace kotte
         EntityHandle player_handle_;
         bool exit_requested_ = false;
 
-        //Final assignment
+        //MY CODE - FINAL ASSIGNMENT my variables
         bool player_alive_ = true;
+        Application::GameState current_game_state_ = Application::GameState::MainMenu;
     };
 }
