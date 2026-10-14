@@ -132,6 +132,8 @@ namespace kotte
         void main_menu_update();
         void main_menu_render();
 
+        void setup_game();
+
         static constexpr int tile_size_ = 40;
         static constexpr int spatial_cell_tiles_ = 8;
         static constexpr float spatial_cell_size_ = tile_size_ * spatial_cell_tiles_;

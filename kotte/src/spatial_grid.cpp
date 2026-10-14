@@ -128,4 +128,12 @@ namespace kotte
             + static_cast<std::size_t>(column);
         return cells_[index];
     }
+
+    //MY CODE - FINAL ASSIGNMENT
+    void SpatialGrid::clear() {
+        
+        for (Cell& cell : cells_) {
+            cell.clear();
+        }
+    }
 }

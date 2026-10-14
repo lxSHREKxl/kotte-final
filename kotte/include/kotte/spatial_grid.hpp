@@ -40,6 +40,10 @@ namespace kotte
         [[nodiscard]] int rows() const noexcept;
         [[nodiscard]] float cell_size() const noexcept;
 
+        //MY CODE - FINAL ASSIGNMENT
+
+        void clear();
+
     private:
         using Cell = std::vector<EntityHandle>;
 

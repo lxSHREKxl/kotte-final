@@ -105,4 +105,11 @@ namespace kotte
 
         return generation;
     }
+
+    //MY CODE - FINAL ASSIGNMENT
+    void EntityStore::clear_entities() {
+        free_slots_.clear();
+        slots_.clear();
+        live_count_ = 0;
+    }
 }

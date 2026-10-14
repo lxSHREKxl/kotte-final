@@ -24,8 +24,6 @@ namespace kotte
             static_cast<float>(map_.width() * tile_size_),
             static_cast<float>(map_.height() * tile_size_)}, spatial_cell_size_}
         , seed_{seed}{
-        populate_entities();
-        initialize_enemies();
     }
 
     void Application::run(){
@@ -66,6 +64,7 @@ namespace kotte
 
     void Application::main_menu_update() {
         if (IsKeyPressed(KEY_SPACE)) {
+            setup_game();
             current_game_state_ = Application::GameState::Playing;
         }
     }
@@ -75,6 +74,20 @@ namespace kotte
         ClearBackground(BLACK);
         DrawText("Press SPACE to Start", 350, 300, 50, WHITE);
         EndDrawing();
+    }
+
+    void Application::setup_game() {
+        entities_.clear_entities();
+        spatial_grid_.clear();
+        enemy_handles_.clear();
+        active_bomb_handles_.clear();
+        destroy_entity_requests_.clear();
+        place_bomb_requests_.clear();
+        bomb_detonated_facts_.clear();
+        blast_effects_.clear();
+
+        populate_entities();
+        initialize_enemies();
     }
 
     void Application::begin_frame() noexcept{
