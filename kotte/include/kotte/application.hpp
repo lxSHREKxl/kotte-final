@@ -180,8 +180,8 @@ namespace kotte
 
         //MY CODE - FINAL ASSIGNMENT my variables
         bool player_alive_ = true;
-        int player_score_ = 0;
-        const int score_to_win_ = 10;
+        float player_score_ = 0.0f;
+        const float score_to_win_ = 500.0f;
         bool has_power_up_ = false;
         int max_active_bombs_ = 3;
         float combo_multiplier_ = 1.0f;

@@ -98,6 +98,8 @@ namespace kotte
         blast_effects_.clear();
 
         player_score_ = 0;
+        combo_timer_ = 0.0f;
+        combo_multiplier_ = 1.0f;
 
         populate_entities();
         initialize_enemies();
@@ -174,6 +176,16 @@ namespace kotte
                 bomb->world_position,
                 state.blast_range
             });
+        }
+
+        combo_timer_ = std::clamp(combo_timer_, 0.0f, 15.0f);
+
+        if (combo_timer_ > 0.0) {
+            combo_timer_ -= delta_time;
+        }
+        else {
+            combo_multiplier_ = 1.0;
+            combo_timer_ = 0.0;
         }
     }
 
@@ -432,7 +444,12 @@ namespace kotte
                 break;
             case EntityKind::enemy:
                 destroy_entity_requests_.push_back({handle});
-                player_score_ += 1;
+                if (combo_timer_ > 0.0f) {
+                    combo_multiplier_ += 0.5f;
+                }
+                combo_timer_ += 5.0f;
+
+                player_score_ += 10 * combo_multiplier_;
                 if (player_score_ >= score_to_win_){
                     current_game_state_ = Application::GameState::Won;
                 }
@@ -632,7 +649,9 @@ namespace kotte
         DrawText("move: WASD/arrows | bomb: Space | quit: Q/Escape", 10, window_.height() - 30, 20, LIGHTGRAY);
 
         //MY CODE - Final assignment
-        DrawText(std::format("Score: {}", player_score_).c_str(), window_.width() - 100, window_.height() - 30, 20, RED);
+        DrawText(std::format("Score: {}", player_score_).c_str(), window_.width() - 200, window_.height() - 30, 20, RED);
+        DrawText(std::format("Combo Timer: {}", combo_timer_).c_str(), window_.width() - 200, window_.height() - 70, 20, RED);
+        DrawText(std::format("Combo Multiplier: {}", combo_multiplier_).c_str(), window_.width() - 200, window_.height() - 110, 20, RED);
     }
 
     void Application::populate_entities(){
