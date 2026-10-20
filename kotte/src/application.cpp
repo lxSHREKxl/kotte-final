@@ -76,6 +76,17 @@ namespace kotte
         EndDrawing();
     }
 
+    void Application::update_bomb_owner_escape() {
+        for (EntityHandle& bomb_handle : active_bomb_handles_) {
+            Entity* candidate = entities_.try_get(bomb_handle);
+            if (candidate->bomb_state->owner_can_escape) {
+                if (!CheckCollisionRecs(entity_collision_bounds(*candidate), entity_collision_bounds(entity(player_handle_)))) {
+                    candidate->bomb_state->owner_can_escape = false;
+                }
+            }
+        }
+    }
+
     void Application::setup_game() {
         entities_.clear_entities();
         spatial_grid_.clear();
@@ -132,6 +143,9 @@ namespace kotte
         update_player(delta_time);
         update_enemies(delta_time);
         queue_bomb_placement();
+
+        update_bomb_owner_escape();
+
     }
 
     void Application::update_timed_gameplay(float delta_time){
@@ -292,6 +306,9 @@ namespace kotte
 
         // Capture values rather than an Entity reference because the request
         // deliberately outlives this simulation phase.
+        if (active_bomb_handles_.size() == max_active_bombs) {
+            return;
+        }
         place_bomb_requests_.push_back({
             player_handle_,
             tile_centre(player().world_position)
@@ -301,8 +318,18 @@ namespace kotte
     void Application::apply_bomb_placements(){
         for(const PlaceBombRequest& request : place_bomb_requests_){
             const Entity* owner = entities_.try_get(request.owner);
-            if(owner == nullptr || owner->kind != EntityKind::player
-                || owner_has_active_bomb(request.owner)){
+            if(owner == nullptr || owner->kind != EntityKind::player){
+                continue;
+            }
+
+            bool space_taken = false; //THIS COULD BE BETTER I THINK - CANT PLACE BOMBS ON EACHOTHER
+            for (EntityHandle bomb_handle : active_bomb_handles_) {
+                const Entity* bomb = entities_.try_get(bomb_handle);
+                if (bomb->world_position == request.world_position) {
+                    space_taken = true;
+                }
+            }
+            if (space_taken) {
                 continue;
             }
 
@@ -312,14 +339,16 @@ namespace kotte
                 .bomb_state = BombState{
                     .owner = request.owner,
                     .fuse_remaining = bomb_fuse_seconds_,
-                    .blast_range = bomb_blast_range_
+                    .blast_range = bomb_blast_range_,
+                    .owner_can_escape = true
                 }
             };
             if (has_power_up_) {
                 bomb.bomb_state = BombState{
                     .owner = request.owner,
                     .fuse_remaining = bomb_fuse_seconds_,
-                    .blast_range = bomb_blast_range_ + 3 //EXTRA POWER HERE ADD CONST VALUE LATER
+                    .blast_range = bomb_blast_range_ + 3, //EXTRA POWER HERE ADD CONST VALUE LATER
+                    .owner_can_escape = true
                 };
                 has_power_up_ = false;
             }
@@ -388,7 +417,7 @@ namespace kotte
         bool blocked_by_crate = false;
 
         for(const EntityHandle handle : contacts.entity_handles){
-            const Entity* candidate = entities_.try_get(handle);
+            Entity* candidate = entities_.try_get(handle);
             if(candidate == nullptr
                 || !CheckCollisionRecs(tile_bounds, entity_collision_bounds(*candidate))){
                 continue;
@@ -396,6 +425,14 @@ namespace kotte
 
             switch(candidate->kind){
             case EntityKind::bomb:
+                //candidate->bomb_state->fuse_remaining = 0.0f;
+                //candidate->bomb_state->detonation_requested = true;
+               // bomb_detonated_facts_.push_back({
+                   // handle,
+                  //  candidate->bomb_state->owner,
+                //    candidate->world_position,
+               //     candidate->bomb_state->blast_range
+              //  });
                 break;
             case EntityKind::enemy:
                 destroy_entity_requests_.push_back({handle});
@@ -752,7 +789,8 @@ namespace kotte
             }
 
             const Entity* candidate = entities_.try_get(candidate_handle);
-            if(candidate == nullptr || !is_solid(candidate->kind) || 
+            if(candidate == nullptr || 
+              (moving_entity_handle == candidate->bomb_state->owner  && candidate->bomb_state->owner_can_escape) ||
               (entity(moving_entity_handle).kind == EntityKind::enemy && candidate->kind == EntityKind::power_up)){ //MAKE BETTER IF POSSIBLE ENEMY - POWER UP COLLISION
                 continue;
             }
@@ -774,6 +812,8 @@ namespace kotte
                     has_power_up_ = true;
                 }
 
+
+
                 blocked = true;
             }
         }
@@ -787,9 +827,8 @@ namespace kotte
         case EntityKind::crate:
         case EntityKind::enemy:
         case EntityKind::power_up:
-            return true;
         case EntityKind::bomb:
-            return false;
+            return true;
         }
 
         return false;

@@ -134,6 +134,8 @@ namespace kotte
 
         void setup_game();
 
+        void update_bomb_owner_escape();
+
         static constexpr int tile_size_ = 40;
         static constexpr int spatial_cell_tiles_ = 8;
         static constexpr float spatial_cell_size_ = tile_size_ * spatial_cell_tiles_;
@@ -178,8 +180,9 @@ namespace kotte
         //MY CODE - FINAL ASSIGNMENT my variables
         bool player_alive_ = true;
         int player_score_ = 0;
-        int score_to_win_ = 10;
+        const int score_to_win_ = 10;
         bool has_power_up_ = false;
+        int max_active_bombs = 3;
         std::uint8_t power_up_range_bonus_ = 3;
         Application::GameState current_game_state_ = Application::GameState::MainMenu;
     };
