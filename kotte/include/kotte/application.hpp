@@ -176,6 +176,8 @@ namespace kotte
 
         //MY CODE - FINAL ASSIGNMENT my variables
         bool player_alive_ = true;
+        int player_score_ = 0;
+        int score_to_win_ = 10;
         Application::GameState current_game_state_ = Application::GameState::MainMenu;
     };
 }

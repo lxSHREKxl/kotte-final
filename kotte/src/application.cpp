@@ -56,7 +56,7 @@ namespace kotte
             render();
         }
         //MY CODE - FINAL ASSIGNMENT different functions for main menu - for now also has the lost state
-        else if (current_game_state_ == Application::GameState::MainMenu || current_game_state_ == Application::GameState::Lost) {
+        else if (current_game_state_ == Application::GameState::MainMenu || current_game_state_ == Application::GameState::Lost || current_game_state_ == Application::GameState::Won) {
             main_menu_update();
             main_menu_render();
         }
@@ -386,8 +386,13 @@ namespace kotte
 
             switch(candidate->kind){
             case EntityKind::bomb:
+                break;
             case EntityKind::enemy:
                 destroy_entity_requests_.push_back({handle});
+                player_score_ += 1;
+                if (player_score_ >= score_to_win_){
+                    current_game_state_ = Application::GameState::Won;
+                }
                 break;
             case EntityKind::crate:
                 destroy_entity_requests_.push_back({handle});
@@ -580,6 +585,9 @@ namespace kotte
         DrawText(diagnostics.c_str(), 10, window_.height() - 54, 20, RAYWHITE);
 
         DrawText("move: WASD/arrows | bomb: Space | quit: Q/Escape", 10, window_.height() - 30, 20, LIGHTGRAY);
+
+        //MY CODE - Final assignment
+        DrawText(std::format("Score: {}", player_score_).c_str(), window_.width() - 100, window_.height() - 30, 20, RED);
     }
 
     void Application::populate_entities(){
