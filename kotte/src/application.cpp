@@ -86,6 +86,8 @@ namespace kotte
         bomb_detonated_facts_.clear();
         blast_effects_.clear();
 
+        player_score_ = 0;
+
         populate_entities();
         initialize_enemies();
     }
@@ -304,7 +306,7 @@ namespace kotte
                 continue;
             }
 
-            const Entity bomb{
+            Entity bomb{
                 .kind = EntityKind::bomb,
                 .world_position = request.world_position,
                 .bomb_state = BombState{
@@ -313,6 +315,14 @@ namespace kotte
                     .blast_range = bomb_blast_range_
                 }
             };
+            if (has_power_up_) {
+                bomb.bomb_state = BombState{
+                    .owner = request.owner,
+                    .fuse_remaining = bomb_fuse_seconds_,
+                    .blast_range = bomb_blast_range_ + 3 //EXTRA POWER HERE ADD CONST VALUE LATER
+                };
+                has_power_up_ = false;
+            }
             const EntityHandle bomb_handle = entities_.create(bomb);
 
             // The store owns the bomb; these handles are synchronized, non-owning
@@ -402,6 +412,8 @@ namespace kotte
                 //MY CODE - FINAL ASSIGNMENT played death from bomb explosion
                 current_game_state_ = Application::GameState::Lost;
                 break;
+            case EntityKind::power_up:
+                destroy_entity_requests_.push_back({handle});
             }
         }
 
@@ -608,10 +620,21 @@ namespace kotte
                 const std::uint8_t kind_roll = random_.next<20, std::uint8_t>();
                 // Week 3's inert bomb markers are no longer needed: every bomb
                 // now enters the world through the explicit lifetime path.
-                if(kind_roll >= 15 && kind_roll < 19){
-                    continue;
+                //if(kind_roll >= 15 && kind_roll < 19){
+                    //continue;
+                //}
+                //EntityKind kind = kind_roll < 15 ? EntityKind::crate : EntityKind::enemy;
+                EntityKind kind;
+                if (kind_roll < 15) {
+                    kind = EntityKind::crate;
                 }
-                const EntityKind kind = kind_roll < 15 ? EntityKind::crate : EntityKind::enemy;
+                else if (kind_roll < 17) {
+                    kind = EntityKind::power_up;
+                }
+                else {
+                    kind = EntityKind::enemy;
+                }
+                
                 const Vector2 world_position{
                     static_cast<float>(x * tile_size_ + tile_size_ / 2),
                     static_cast<float>(y * tile_size_ + tile_size_ / 2)
@@ -664,6 +687,7 @@ namespace kotte
         case EntityKind::bomb: size = {22.0f, 22.0f}; break;
         case EntityKind::crate: size = {36.0f, 48.0f}; break;
         case EntityKind::enemy: size = {28.0f, 30.0f}; break;
+        case EntityKind::power_up: size = {22.0f, 22.0f}; break;
         }
 
         const Vector2 top_left = entity.world_position - Vector2{size.x / 2.0f, size.y};
@@ -680,6 +704,7 @@ namespace kotte
         case EntityKind::bomb: size = {18.0f, 12.0f}; break;
         case EntityKind::crate: size = {32.0f, 32.0f}; break;
         case EntityKind::enemy: size = {24.0f, 14.0f}; break;
+        case EntityKind::power_up: size = {18.0f, 12.0f}; break;
         }
 
         const Vector2 top_left = entity.world_position - Vector2{size.x / 2.0f, size.y};
@@ -727,7 +752,8 @@ namespace kotte
             }
 
             const Entity* candidate = entities_.try_get(candidate_handle);
-            if(candidate == nullptr || !is_solid(candidate->kind)){
+            if(candidate == nullptr || !is_solid(candidate->kind) || 
+              (entity(moving_entity_handle).kind == EntityKind::enemy && candidate->kind == EntityKind::power_up)){ //MAKE BETTER IF POSSIBLE ENEMY - POWER UP COLLISION
                 continue;
             }
 
@@ -742,6 +768,12 @@ namespace kotte
                     current_game_state_ = Application::GameState::Lost;
                 }
 
+                //TAKING POWER UP
+                if (moving_entity_handle == player_handle_ && candidate->kind == EntityKind::power_up){
+                    destroy_entity_requests_.push_back({candidate_handle});
+                    has_power_up_ = true;
+                }
+
                 blocked = true;
             }
         }
@@ -754,6 +786,7 @@ namespace kotte
         case EntityKind::player:
         case EntityKind::crate:
         case EntityKind::enemy:
+        case EntityKind::power_up:
             return true;
         case EntityKind::bomb:
             return false;
@@ -816,6 +849,7 @@ namespace kotte
         case EntityKind::bomb: return bomb_color_;
         case EntityKind::crate: return crate_color_;
         case EntityKind::enemy: return enemy_color_;
+        case EntityKind::power_up: return power_up_color_;
         }
         return MAGENTA;
     }

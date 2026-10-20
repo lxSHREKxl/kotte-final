@@ -12,7 +12,9 @@ namespace kotte
         player,
         bomb,
         crate,
-        enemy
+        enemy,
+        //MY CODE
+        power_up
     };
 
     enum class CardinalDirection : std::uint8_t {

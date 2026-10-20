@@ -154,6 +154,7 @@ namespace kotte
         static constexpr Color crate_color_{0xb0, 0x72, 0x3c, 0xff};
         static constexpr Color enemy_color_{0xd9, 0x4f, 0x70, 0xff};
         static constexpr Color wall_color_{0x78, 0x5f, 0x47, 0xff};
+        static constexpr Color power_up_color_{0x4C, 0xAF, 0x50, 0xff};
 
         Window window_; // Constructed first, destroyed last.
         Camera camera_;
@@ -178,6 +179,8 @@ namespace kotte
         bool player_alive_ = true;
         int player_score_ = 0;
         int score_to_win_ = 10;
+        bool has_power_up_ = false;
+        std::uint8_t power_up_range_bonus_ = 3;
         Application::GameState current_game_state_ = Application::GameState::MainMenu;
     };
 }
