@@ -186,16 +186,16 @@ namespace kotte
             const float tile_extent = static_cast<float>(tile_size_);
             const int origin_column = static_cast<int>(std::floor(fact.world_position.x / tile_extent));
             const int origin_row = static_cast<int>(std::floor(fact.world_position.y / tile_extent));
-            (void) resolve_blast_tile(effect, origin_column, origin_row);
+            (void) resolve_blast_tile(effect, origin_column, origin_row, fact);
 
             // The detonating bomb must disappear even if its presentation or
             // collision bounds change independently of blast-tile detection.
             destroy_entity_requests_.push_back({fact.bomb});
 
-            append_blast_ray(effect, origin_column, origin_row, 0, -1, fact.blast_range);
-            append_blast_ray(effect, origin_column, origin_row, 1, 0, fact.blast_range);
-            append_blast_ray(effect, origin_column, origin_row, 0, 1, fact.blast_range);
-            append_blast_ray(effect, origin_column, origin_row, -1, 0, fact.blast_range);
+            append_blast_ray(effect, origin_column, origin_row, 0, -1, fact);
+            append_blast_ray(effect, origin_column, origin_row, 1, 0, fact);
+            append_blast_ray(effect, origin_column, origin_row, 0, 1, fact);
+            append_blast_ray(effect, origin_column, origin_row, -1, 0, fact);
 
             blast_effects_.push_back(std::move(effect));
         }
@@ -306,7 +306,7 @@ namespace kotte
 
         // Capture values rather than an Entity reference because the request
         // deliberately outlives this simulation phase.
-        if (active_bomb_handles_.size() == max_active_bombs) {
+        if (active_bomb_handles_.size() == max_active_bombs_) {
             return;
         }
         place_bomb_requests_.push_back({
@@ -402,7 +402,8 @@ namespace kotte
     bool Application::resolve_blast_tile(
         BlastEffect& effect,
         int column,
-        int row){
+        int row,
+        BombDetonated detonation){
         const Vector2 centre = tile_centre(column, row);
         effect.tile_centres.push_back(centre);
 
@@ -425,14 +426,9 @@ namespace kotte
 
             switch(candidate->kind){
             case EntityKind::bomb:
-                //candidate->bomb_state->fuse_remaining = 0.0f;
-                //candidate->bomb_state->detonation_requested = true;
-               // bomb_detonated_facts_.push_back({
-                   // handle,
-                  //  candidate->bomb_state->owner,
-                //    candidate->world_position,
-               //     candidate->bomb_state->blast_range
-              //  });
+                if (handle != detonation.bomb) {
+                    candidate->bomb_state->fuse_remaining = 0.0f;
+                }
                 break;
             case EntityKind::enemy:
                 destroy_entity_requests_.push_back({handle});
@@ -463,15 +459,15 @@ namespace kotte
         int origin_row,
         int column_step,
         int row_step,
-        std::uint8_t range){
-        for(int distance = 1; distance <= static_cast<int>(range); ++distance){
+        BombDetonated detonation){
+        for(int distance = 1; distance <= static_cast<int>(detonation.blast_range); ++distance){
             const int column = origin_column + column_step * distance;
             const int row = origin_row + row_step * distance;
             if(!map_.contains(column, row) || map_.at(column, row).type == TileType::wall){
                 break;
             }
 
-            if(resolve_blast_tile(effect, column, row)){
+            if(resolve_blast_tile(effect, column, row, detonation)){
                 break;
             }
         }

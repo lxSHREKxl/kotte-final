@@ -98,14 +98,15 @@ namespace kotte
         [[nodiscard]] bool resolve_blast_tile(
             BlastEffect& effect,
             int column,
-            int row);
+            int row,
+            BombDetonated detonation);
         void append_blast_ray(
             BlastEffect& effect,
             int origin_column,
             int origin_row,
             int column_step,
             int row_step,
-            std::uint8_t range);
+            BombDetonated detonation);
         void update_camera(float delta_time) noexcept;
         void render();
         void populate_entities();
@@ -182,7 +183,9 @@ namespace kotte
         int player_score_ = 0;
         const int score_to_win_ = 10;
         bool has_power_up_ = false;
-        int max_active_bombs = 3;
+        int max_active_bombs_ = 3;
+        float combo_multiplier_ = 1.0f;
+        float combo_timer_ = 0.0;
         std::uint8_t power_up_range_bonus_ = 3;
         Application::GameState current_game_state_ = Application::GameState::MainMenu;
     };
