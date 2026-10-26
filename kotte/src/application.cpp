@@ -344,13 +344,14 @@ namespace kotte
                 continue;
             }
 
-            bool space_taken = false; //THIS COULD BE BETTER I THINK - CANT PLACE BOMBS ON EACHOTHER
+            bool space_taken = false;
             for (EntityHandle bomb_handle : active_bomb_handles_) {
                 const Entity* bomb = entities_.try_get(bomb_handle);
                 if (bomb == nullptr)
                     continue;
                 if (bomb->world_position == request.world_position) {
                     space_taken = true;
+                    break;
                 }
             }
             if (space_taken) {
