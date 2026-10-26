@@ -45,7 +45,12 @@ namespace kotte
         //
         // Keeping one call site per phase makes event lifetime and mutation
         // boundaries visible as the simulation grows.
-        if (current_game_state_ == Application::GameState::Playing) {
+
+        if (current_game_state_ == GameState::MainMenu) {
+            main_menu_update();
+            main_menu_render();
+        }
+        else{
             begin_frame();
             collect_frame_actions();
             update_gameplay(delta_time);
@@ -55,17 +60,11 @@ namespace kotte
             update_presentation(delta_time);
             render();
         }
-        //MY CODE - FINAL ASSIGNMENT different functions for main menu - for now also has the lost state
-        else if (current_game_state_ == Application::GameState::MainMenu || current_game_state_ == Application::GameState::Lost || current_game_state_ == Application::GameState::Won) {
-            main_menu_update();
-            main_menu_render();
-        }
     }
 
     void Application::main_menu_update() {
         if (IsKeyPressed(KEY_SPACE)) {
             setup_game();
-            current_game_state_ = Application::GameState::Playing;
         }
     }
 
@@ -78,10 +77,12 @@ namespace kotte
 
     void Application::update_bomb_owner_escape() {
         for (EntityHandle& bomb_handle : active_bomb_handles_) {
-            Entity* candidate = entities_.try_get(bomb_handle);
-            if (candidate->bomb_state->owner_can_escape) {
-                if (!CheckCollisionRecs(entity_collision_bounds(*candidate), entity_collision_bounds(entity(player_handle_)))) {
-                    candidate->bomb_state->owner_can_escape = false;
+            Entity* bomb = entities_.try_get(bomb_handle);
+            if (bomb == nullptr)
+                continue;
+            if (bomb->bomb_state->owner_can_escape) {
+                if (!CheckCollisionRecs(entity_collision_bounds(*bomb), entity_collision_bounds(entity(player_handle_)))) {
+                    bomb->bomb_state->owner_can_escape = false;
                 }
             }
         }
@@ -103,6 +104,8 @@ namespace kotte
 
         populate_entities();
         initialize_enemies();
+
+        current_game_state_ = GameState::Playing;
     }
 
     void Application::begin_frame() noexcept{
@@ -114,29 +117,36 @@ namespace kotte
         collision_diagnostics_ = {};
     }
 
-    void Application::collect_frame_actions() noexcept{
-        if(IsKeyPressed(KEY_ESCAPE) || IsKeyPressed(KEY_Q)){
+    void Application::collect_frame_actions() noexcept {
+        if (IsKeyPressed(KEY_ESCAPE) || IsKeyPressed(KEY_Q)) {
             request_exit();
         }
-        frame_actions_.place_bomb = IsKeyPressed(KEY_SPACE);
 
-        Vector2& movement_direction = frame_actions_.player_movement_direction;
-        if(IsKeyDown(KEY_LEFT) || IsKeyDown(KEY_A)){
-            movement_direction.x -= 1.0f;
-        }
-        if(IsKeyDown(KEY_RIGHT) || IsKeyDown(KEY_D)){
-            movement_direction.x += 1.0f;
-        }
-        if(IsKeyDown(KEY_UP) || IsKeyDown(KEY_W)){
-            movement_direction.y -= 1.0f;
-        }
-        if(IsKeyDown(KEY_DOWN) || IsKeyDown(KEY_S)){
-            movement_direction.y += 1.0f;
-        }
+        if (current_game_state_ == GameState::Playing) { //ONLY ACCEPT INPUT IF STILL PLAYING
+            frame_actions_.place_bomb = IsKeyPressed(KEY_SPACE);
 
-        // Normalize intent before simulation so bindings cannot change movement speed.
-        if(movement_direction.x != 0.0f || movement_direction.y != 0.0f){
-            movement_direction = Vector2Normalize(movement_direction);
+            Vector2& movement_direction = frame_actions_.player_movement_direction;
+            if (IsKeyDown(KEY_LEFT) || IsKeyDown(KEY_A)) {
+                movement_direction.x -= 1.0f;
+            }
+            if (IsKeyDown(KEY_RIGHT) || IsKeyDown(KEY_D)) {
+                movement_direction.x += 1.0f;
+            }
+            if (IsKeyDown(KEY_UP) || IsKeyDown(KEY_W)) {
+                movement_direction.y -= 1.0f;
+            }
+            if (IsKeyDown(KEY_DOWN) || IsKeyDown(KEY_S)) {
+                movement_direction.y += 1.0f;
+            }
+
+            // Normalize intent before simulation so bindings cannot change movement speed.
+            if (movement_direction.x != 0.0f || movement_direction.y != 0.0f) {
+                movement_direction = Vector2Normalize(movement_direction);
+            }
+        }
+        else {
+            if (IsKeyPressed(KEY_SPACE))
+                setup_game();
         }
     }
 
@@ -337,6 +347,8 @@ namespace kotte
             bool space_taken = false; //THIS COULD BE BETTER I THINK - CANT PLACE BOMBS ON EACHOTHER
             for (EntityHandle bomb_handle : active_bomb_handles_) {
                 const Entity* bomb = entities_.try_get(bomb_handle);
+                if (bomb == nullptr)
+                    continue;
                 if (bomb->world_position == request.world_position) {
                     space_taken = true;
                 }
@@ -345,25 +357,23 @@ namespace kotte
                 continue;
             }
 
+            uint8_t blast_range = bomb_blast_range_;
+            if (has_power_up_) {
+                blast_range += 3;
+                has_power_up_ = false;
+            }
+
             Entity bomb{
                 .kind = EntityKind::bomb,
                 .world_position = request.world_position,
                 .bomb_state = BombState{
                     .owner = request.owner,
                     .fuse_remaining = bomb_fuse_seconds_,
-                    .blast_range = bomb_blast_range_,
+                    .blast_range = blast_range,
                     .owner_can_escape = true
                 }
             };
-            if (has_power_up_) {
-                bomb.bomb_state = BombState{
-                    .owner = request.owner,
-                    .fuse_remaining = bomb_fuse_seconds_,
-                    .blast_range = bomb_blast_range_ + 3, //EXTRA POWER HERE ADD CONST VALUE LATER
-                    .owner_can_escape = true
-                };
-                has_power_up_ = false;
-            }
+
             const EntityHandle bomb_handle = entities_.create(bomb);
 
             // The store owns the bomb; these handles are synchronized, non-owning
@@ -451,7 +461,7 @@ namespace kotte
 
                 player_score_ += 10 * combo_multiplier_;
                 if (player_score_ >= score_to_win_){
-                    current_game_state_ = Application::GameState::Won;
+                    current_game_state_ = GameState::Won;
                 }
                 break;
             case EntityKind::crate:
@@ -460,7 +470,8 @@ namespace kotte
                 break;
             case EntityKind::player:
                 //MY CODE - FINAL ASSIGNMENT played death from bomb explosion
-                current_game_state_ = Application::GameState::Lost;
+                if(current_game_state_ == GameState::Playing)
+                current_game_state_ = GameState::Lost;
                 break;
             case EntityKind::power_up:
                 destroy_entity_requests_.push_back({handle});
@@ -652,6 +663,17 @@ namespace kotte
         DrawText(std::format("Score: {}", player_score_).c_str(), window_.width() - 200, window_.height() - 30, 20, RED);
         DrawText(std::format("Combo Timer: {}", combo_timer_).c_str(), window_.width() - 200, window_.height() - 70, 20, RED);
         DrawText(std::format("Combo Multiplier: {}", combo_multiplier_).c_str(), window_.width() - 200, window_.height() - 110, 20, RED);
+
+        if (current_game_state_ != GameState::Playing)
+        {
+            if (current_game_state_ == GameState::Lost) {
+                DrawText("You Lost!", 400, 300, 100, RED);
+            }
+            else{
+                DrawText("You Won!", 400, 300, 100, YELLOW);
+            }
+            DrawText("Press SPACE to restart", 300, 400, 50, WHITE);
+        }
     }
 
     void Application::populate_entities(){
@@ -818,7 +840,8 @@ namespace kotte
                 //MY CODE - FINAL ASSIGNMENT - PLAYER DEATH
                 if (moving_entity_handle == player_handle_ && candidate->kind == EntityKind::enemy ||
                     entity(moving_entity_handle).kind == EntityKind::enemy && candidate->kind == EntityKind::player){
-                    current_game_state_ = Application::GameState::Lost;
+                    if(current_game_state_ == GameState::Playing)
+                    current_game_state_ = GameState::Lost;
                 }
 
                 //TAKING POWER UP
