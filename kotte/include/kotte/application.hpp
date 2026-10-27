@@ -69,7 +69,7 @@ namespace kotte
             EntityHandle bomb;
             EntityHandle owner;
             Vector2 world_position{};
-            std::uint8_t blast_range = 0;
+            std::uint16_t blast_range = 0;
         };
 
         struct DestroyEntityRequest final {
@@ -179,14 +179,16 @@ namespace kotte
         bool exit_requested_ = false;
 
         //MY CODE - FINAL ASSIGNMENT my variables
-        bool player_alive_ = true;
         float player_score_ = 0.0f;
         const float score_to_win_ = 500.0f;
+
         bool has_power_up_ = false;
         int max_active_bombs_ = 3;
+        std::uint16_t power_up_range_bonus_ = 3;
+
         float combo_multiplier_ = 1.0f;
         float combo_timer_ = 0.0;
-        std::uint8_t power_up_range_bonus_ = 3;
+
         Application::GameState current_game_state_ = Application::GameState::MainMenu;
     };
 }

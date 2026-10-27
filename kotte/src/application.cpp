@@ -46,7 +46,7 @@ namespace kotte
         // Keeping one call site per phase makes event lifetime and mutation
         // boundaries visible as the simulation grows.
 
-        if (current_game_state_ == GameState::MainMenu) {
+        if (current_game_state_ == GameState::MainMenu) { //DIFFERENT ORDER FOR MAINMENU
             main_menu_update();
             main_menu_render();
         }
@@ -81,14 +81,14 @@ namespace kotte
             if (bomb == nullptr)
                 continue;
             if (bomb->bomb_state->owner_can_escape) {
-                if (!CheckCollisionRecs(entity_collision_bounds(*bomb), entity_collision_bounds(entity(player_handle_)))) {
+                if (!CheckCollisionRecs(entity_collision_bounds(*bomb), entity_collision_bounds(entity(bomb->bomb_state->owner)))) {
                     bomb->bomb_state->owner_can_escape = false;
                 }
             }
         }
     }
 
-    void Application::setup_game() {
+    void Application::setup_game() { //RESTART
         entities_.clear_entities();
         spatial_grid_.clear();
         enemy_handles_.clear();
@@ -157,7 +157,6 @@ namespace kotte
         queue_bomb_placement();
 
         update_bomb_owner_escape();
-
     }
 
     void Application::update_timed_gameplay(float delta_time){
@@ -358,9 +357,9 @@ namespace kotte
                 continue;
             }
 
-            uint8_t blast_range = bomb_blast_range_;
+            uint16_t blast_range = bomb_blast_range_;
             if (has_power_up_) {
-                blast_range += 3;
+                blast_range += power_up_range_bonus_;
                 has_power_up_ = false;
             }
 
@@ -449,9 +448,8 @@ namespace kotte
 
             switch(candidate->kind){
             case EntityKind::bomb:
-                if (handle != detonation.bomb) {
+                if (handle != detonation.bomb) // IF EXPLOSION HIT OTHER BOMBS, LOWER THEIR FUSE
                     candidate->bomb_state->fuse_remaining = 0.0f;
-                }
                 break;
             case EntityKind::enemy:
                 destroy_entity_requests_.push_back({handle});
@@ -470,8 +468,8 @@ namespace kotte
                 blocked_by_crate = true;
                 break;
             case EntityKind::player:
-                //MY CODE - FINAL ASSIGNMENT played death from bomb explosion
-                if(current_game_state_ == GameState::Playing)
+                //MY CODE - FINAL ASSIGNMENT player death from bomb explosion
+                if(current_game_state_ == GameState::Playing) //WIN TAKES PRIORITY
                 current_game_state_ = GameState::Lost;
                 break;
             case EntityKind::power_up:
@@ -661,7 +659,7 @@ namespace kotte
         DrawText("move: WASD/arrows | bomb: Space | quit: Q/Escape", 10, window_.height() - 30, 20, LIGHTGRAY);
 
         //MY CODE - Final assignment
-        DrawText(std::format("Score: {}", player_score_).c_str(), window_.width() - 200, window_.height() - 30, 20, RED);
+        DrawText(std::format("Score: {} / 500", player_score_).c_str(), window_.width() - 200, window_.height() - 30, 20, RED);
         DrawText(std::format("Combo Timer: {}", combo_timer_).c_str(), window_.width() - 200, window_.height() - 70, 20, RED);
         DrawText(std::format("Combo Multiplier: {}", combo_multiplier_).c_str(), window_.width() - 200, window_.height() - 110, 20, RED);
 
@@ -695,10 +693,7 @@ namespace kotte
                 const std::uint8_t kind_roll = random_.next<20, std::uint8_t>();
                 // Week 3's inert bomb markers are no longer needed: every bomb
                 // now enters the world through the explicit lifetime path.
-                //if(kind_roll >= 15 && kind_roll < 19){
-                    //continue;
-                //}
-                //EntityKind kind = kind_roll < 15 ? EntityKind::crate : EntityKind::enemy;
+                //ADDING MORE ENEMIES AND POWER UPS TO THE SETUP
                 EntityKind kind;
                 if (kind_roll < 15) {
                     kind = EntityKind::crate;
@@ -827,9 +822,15 @@ namespace kotte
             }
 
             const Entity* candidate = entities_.try_get(candidate_handle);
-            if(candidate == nullptr || 
-              (moving_entity_handle == candidate->bomb_state->owner  && candidate->bomb_state->owner_can_escape) ||
-              (entity(moving_entity_handle).kind == EntityKind::enemy && candidate->kind == EntityKind::power_up)){ //MAKE BETTER IF POSSIBLE ENEMY - POWER UP COLLISION
+            if (candidate == nullptr) {
+                continue;
+            }
+
+            if (moving_entity_handle == candidate->bomb_state->owner && candidate->bomb_state->owner_can_escape) {// IGNORE PLACED BOMB
+                continue;
+            }
+
+            if (proposed_entity.kind == EntityKind::enemy && candidate->kind == EntityKind::power_up) {// IGNORE ENEMY - POWER UP COLLISION
                 continue;
             }
 
@@ -840,8 +841,8 @@ namespace kotte
 
                 //MY CODE - FINAL ASSIGNMENT - PLAYER DEATH
                 if (moving_entity_handle == player_handle_ && candidate->kind == EntityKind::enemy ||
-                    entity(moving_entity_handle).kind == EntityKind::enemy && candidate->kind == EntityKind::player){
-                    if(current_game_state_ == GameState::Playing)
+                    proposed_entity.kind == EntityKind::enemy && candidate->kind == EntityKind::player){
+                    if(current_game_state_ == GameState::Playing) //IF PLAYER WON ALREADY IT TAKES PRIORITY
                     current_game_state_ = GameState::Lost;
                 }
 
@@ -850,8 +851,6 @@ namespace kotte
                     destroy_entity_requests_.push_back({candidate_handle});
                     has_power_up_ = true;
                 }
-
-
 
                 blocked = true;
             }

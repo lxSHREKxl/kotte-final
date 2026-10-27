@@ -27,7 +27,7 @@ namespace kotte
     struct BombState final {
         EntityHandle owner;
         float fuse_remaining = 0.0f;
-        std::uint8_t blast_range = 0;
+        std::uint16_t blast_range = 0;
         bool detonation_requested = false;
         bool owner_can_escape = false;
     };
